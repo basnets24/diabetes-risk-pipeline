@@ -1,7 +1,7 @@
 #!/usr/bin/env bash 
 set -euo pipefail 
 
-IN="../diabetes_dataset.csv"
+IN="/mnt/scratch/CS131_jelenag/projects/team10_sec3/diabetes_dataset.csv"
 DELIM=","
 OUTDIR="out"
 DATA="data"
@@ -58,7 +58,7 @@ echo "Top $TOP_N $ENTITY"
 cut -d"$DELIM" -f4 "$IN" | tail -n +2 | sort | uniq -c | sort -nr | head -n "$TOP_N" > "$OUTDIR/top_${TOP_N}_$ENTITY.txt"
 
 # ---- Skinny table ( cut and dedupe) -----
-echo "Skinny Table"
+echo "Skinny Table including age, hypertension and diabetes"
 {
   echo "age,hypertension,diabetes"
   cut -d"$DELIM" -f3,10,16 "$IN" | tail -n +2 | sort -u
@@ -69,7 +69,7 @@ echo
 echo "grep examples" 
 # Case-insensitive search for "no info" in smoking_history
 # (We extract col 12, then grep -i)
-cut -d"$DELIM" -f12 "$IN" | tail -n +2 | grep -i "no info" | head -n 20 > "$OUTDIR/grep_smoking_noinfo_ci_head.txt" || true 
+cut -d"$DELIM" -f12 "$IN" | tail -n +2 | grep -i "no info" | head -n 20 > "$OUTDIR/grep_smoking_noinfo_ci_head.txt" 2> "$OUTDIR/grep_errors.txt" || true 
 echo "Wrote $OUTDIR/grep_smoking_noinfo_ci_head.txt (first 20 matches)"
 
 # Invert match: values NOT equal to "No Info" (exact case), show top 10
