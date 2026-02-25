@@ -1,6 +1,6 @@
-    750 No Info
-    684 never
-    186 current
-    176 former
-    118 not current
-     86 ever
+    747 No Info
+    680 never
+    190 former
+    162 current
+    124 not current
+     97 ever
