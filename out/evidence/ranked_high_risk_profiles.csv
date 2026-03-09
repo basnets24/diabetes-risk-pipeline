@@ -1,0 +1,21 @@
+rank,cohort_label,cohort_size,diabetes_count,prevalence_rate
+1,Heart disease: Yes,3942,1267,0.3214
+2,Hypertension: Yes,7485,2088,0.279
+3,Age group: 70+,13275,2673,0.2014
+4,BMI category: Obese,23536,4233,0.1799
+5,Age group: 55-69,18987,3301,0.1739
+6,Smoking status: Former,19803,2752,0.139
+7,Smoking status: Current,9286,948,0.1021
+8,Gender: Male,41430,4039,0.0975
+9,Smoking status: Never,35095,3346,0.0953
+10,Race: AfricanAmerican,20223,1768,0.0874
+11,Race: Asian,20015,1743,0.0871
+12,Race: Hispanic,19888,1676,0.0843
+13,Race: Caucasian,19876,1670,0.084
+14,Race: Other,19998,1643,0.0822
+15,Age group: 40-54,22251,1816,0.0816
+16,Gender: Female,58552,4461,0.0762
+17,Heart disease: No,96058,7233,0.0753
+18,BMI category: Overweight,45751,3340,0.073
+19,Hypertension: No,92515,6412,0.0693
+20,Smoking status: Unknown,35816,1454,0.0406
