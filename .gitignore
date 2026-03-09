@@ -2,7 +2,6 @@ out/cleaned_diabetes_data.csv
 
 # Dataset files
 *.tsv
-*.csv
 *.xlsx
 
 # Byte-compiled / optimized / DLL files
