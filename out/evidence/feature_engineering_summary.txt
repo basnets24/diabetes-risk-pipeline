@@ -1,0 +1,105 @@
+FEATURE ENGINEERING SUMMARY
+============================================================
+Rows in cleaned dataset: 100000
+Columns in cleaned dataset: 10
+
+RACE
+------------------------------------------------------------
+AfricanAmerican: 20223
+Asian: 20015
+Caucasian: 19876
+Hispanic: 19888
+Other: 19998
+
+AGE_BUCKET
+------------------------------------------------------------
+0-24: 25885
+25-39: 19602
+40-54: 22251
+55-69: 18987
+70+: 13275
+
+BMI_BUCKET
+------------------------------------------------------------
+Normal: 22219
+Obese: 23536
+Overweight: 45751
+Underweight: 8494
+
+GENDER
+------------------------------------------------------------
+Female: 58552
+Male: 41430
+Other: 18
+
+SMOKING_HISTORY
+------------------------------------------------------------
+Current: 9286
+Former: 19803
+Never: 35095
+Unknown: 35816
+
+LOCATION
+------------------------------------------------------------
+Alabama: 2036
+Alaska: 2035
+Arizona: 1986
+Arkansas: 2037
+California: 1986
+Colorado: 2035
+Connecticut: 2035
+Delaware: 2036
+District of Columbia: 2036
+Florida: 2037
+Georgia: 2036
+Guam: 1204
+Hawaii: 2038
+Idaho: 1988
+Illinois: 2036
+Indiana: 1987
+Iowa: 2038
+Kansas: 2036
+Kentucky: 2038
+Louisiana: 2036
+Maine: 2036
+Maryland: 2035
+Massachusetts: 2036
+Michigan: 2036
+Minnesota: 2037
+Mississippi: 2035
+Missouri: 2035
+Montana: 2033
+Nebraska: 2038
+Nevada: 1986
+New Hampshire: 2035
+New Jersey: 2037
+New Mexico: 2033
+New York: 2035
+North Carolina: 2035
+North Dakota: 2035
+Ohio: 1986
+Oklahoma: 1986
+Oregon: 2036
+Pennsylvania: 2036
+Puerto Rico: 1295
+Rhode Island: 2035
+South Carolina: 1987
+South Dakota: 2033
+Tennessee: 1574
+Texas: 1337
+United States: 1401
+Utah: 1359
+Vermont: 1338
+Virgin Islands: 763
+Virginia: 1350
+Washington: 1363
+West Virginia: 1132
+Wisconsin: 388
+Wyoming: 388
+
+DERIVED FIELD CHECKS
+------------------------------------------------------------
+Unknown race rows: 0
+Multiple race rows: 0
+Unknown age bucket rows: 0
+Unknown bmi bucket rows: 0
