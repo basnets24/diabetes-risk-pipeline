@@ -1,0 +1,63 @@
+DATA QUALITY REPORT
+============================================================
+Dataset path: ../diabetes_dataset.csv
+Rows: 100000
+Columns: 16
+
+NULL COUNTS BY COLUMN
+------------------------------------------------------------
+year: 0
+gender: 0
+age: 0
+location: 0
+race:AfricanAmerican: 0
+race:Asian: 0
+race:Caucasian: 0
+race:Hispanic: 0
+race:Other: 0
+hypertension: 0
+heart_disease: 0
+smoking_history: 0
+bmi: 0
+hbA1c_level: 0
+blood_glucose_level: 0
+diabetes: 0
+
+NUMERIC RANGES
+------------------------------------------------------------
+year: min=2015, max=2022
+age: min=0.08, max=80.0
+bmi: min=10.01, max=95.69
+hbA1c_level: min=3.5, max=9.0
+blood_glucose_level: min=80, max=300
+
+BINARY FIELD VALIDATION
+------------------------------------------------------------
+hypertension: unique_values=[0, 1], invalid_count=0
+heart_disease: unique_values=[0, 1], invalid_count=0
+diabetes: unique_values=[0, 1], invalid_count=0
+race:AfricanAmerican: unique_values=[0, 1], invalid_count=0
+race:Asian: unique_values=[0, 1], invalid_count=0
+race:Caucasian: unique_values=[0, 1], invalid_count=0
+race:Hispanic: unique_values=[0, 1], invalid_count=0
+race:Other: unique_values=[0, 1], invalid_count=0
+
+DIABETES CLASS DISTRIBUTION
+------------------------------------------------------------
+0: 91500 (91.50%)
+1: 8500 (8.50%)
+
+RACE ONE-HOT CONSISTENCY CHECK
+------------------------------------------------------------
+Rows with exactly one race flag = 1: 100000
+Rows with all race flags = 0: 0
+Rows with multiple race flags = 1: 0
+Rows with non-binary values in race columns: 0
+
+INVALID VALUE CHECKS
+------------------------------------------------------------
+age outside [0, 120]: 0
+negative bmi values: 0
+year outside [1900, 2100]: 0
+negative hbA1c_level values: 0
+negative blood_glucose_level values: 0
