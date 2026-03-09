@@ -1,0 +1,5 @@
+1	AfricanAmerican	20223
+2	Asian	20015
+3	Caucasian	19876
+4	Hispanic	19888
+5	Others	19998

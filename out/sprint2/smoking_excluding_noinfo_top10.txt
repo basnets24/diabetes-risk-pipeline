@@ -1,0 +1,5 @@
+  35095 never
+   9352 former
+   9286 current
+   6447 not current
+   4004 ever
