@@ -1,0 +1,54 @@
+rank,location,cohort_size,diabetes_count,prevalence_rate
+1,Delaware,2036,200,0.0982
+2,Kansas,2036,199,0.0977
+3,Illinois,2036,195,0.0958
+4,Montana,2033,194,0.0954
+5,West Virginia,1132,107,0.0945
+6,Virgin Islands,763,72,0.0944
+7,Rhode Island,2035,192,0.0943
+8,Kentucky,2038,192,0.0942
+9,United States,1401,131,0.0935
+10,Vermont,1338,125,0.0934
+11,Tennessee,1574,146,0.0928
+12,Virginia,1350,125,0.0926
+13,Guam,1204,110,0.0914
+14,Hawaii,2038,186,0.0913
+15,New Mexico,2033,184,0.0905
+16,Mississippi,2035,184,0.0904
+17,Maryland,2035,184,0.0904
+18,Washington,1363,121,0.0888
+19,Connecticut,2035,180,0.0885
+20,Utah,1359,120,0.0883
+21,District of Columbia,2036,178,0.0874
+22,North Dakota,2035,177,0.087
+23,Florida,2037,176,0.0864
+24,Alabama,2036,175,0.086
+25,Nebraska,2038,175,0.0859
+26,Nevada,1986,169,0.0851
+27,Michigan,2036,173,0.085
+28,Alaska,2035,173,0.085
+29,Arkansas,2037,173,0.0849
+30,Georgia,2036,172,0.0845
+31,Minnesota,2037,172,0.0844
+32,Indiana,1987,167,0.084
+33,Maine,2036,170,0.0835
+34,Pennsylvania,2036,170,0.0835
+35,Missouri,2035,167,0.0821
+36,Louisiana,2036,167,0.082
+37,Oregon,2036,167,0.082
+38,Texas,1337,109,0.0815
+39,California,1986,161,0.0811
+40,Puerto Rico,1295,104,0.0803
+41,Colorado,2035,163,0.0801
+42,South Carolina,1987,159,0.08
+43,New Jersey,2037,163,0.08
+44,Iowa,2038,162,0.0795
+45,North Carolina,2035,160,0.0786
+46,Massachusetts,2036,159,0.0781
+47,Ohio,1986,155,0.078
+48,South Dakota,2033,158,0.0777
+49,Idaho,1988,149,0.0749
+50,New Hampshire,2035,151,0.0742
+51,Oklahoma,1986,142,0.0715
+52,Arizona,1986,140,0.0705
+53,New York,2035,140,0.0688
