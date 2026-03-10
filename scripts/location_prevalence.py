@@ -1,75 +1,54 @@
 #!/usr/bin/env python3
+"""
+location_prevalence.py (pandas-free)
 
-from pathlib import Path
-import pandas as pd
+Computes diabetes prevalence by location.
 
-# Input artifact produced by cohort_analysis.py
-INPUT_PATH = Path("out/evidence/cohort_prevalence_summary.csv")
+Usage:
+  python3 scripts/location_prevalence.py <DATASET_PATH> [DELIM]
 
-# Output artifact for location analysis
-OUTPUT_PATH = Path("out/evidence/location_prevalence_profile.csv")
+Output:
+  out/evidence/location_prevalence_profile.csv
+"""
 
-# Remove very small cohorts
-MIN_COHORT_SIZE = 500
+import sys, os, csv
+from collections import defaultdict
 
-
-def validate_input():
-    # Ensure the cohort summary exists
-    if not INPUT_PATH.exists():
-        raise FileNotFoundError(
-            f"Cohort summary not found at {INPUT_PATH}. Run cohort_analysis.py first."
-        )
-
-
-def build_location_table(df: pd.DataFrame) -> pd.DataFrame:
-
-    # Keep only location rows
-    locations = df[df["cohort_dimension"] == "location"].copy()
-
-    # Remove small cohorts
-    locations = locations[locations["cohort_size"] >= MIN_COHORT_SIZE]
-
-    # Sort by prevalence descending
-    locations = locations.sort_values(
-        by="prevalence_rate",
-        ascending=False
-    )
-
-    # Add rank column
-    locations = locations.reset_index(drop=True)
-    locations.insert(0, "rank", locations.index + 1)
-
-    # Rename column for clarity
-    locations = locations.rename(columns={"cohort_value": "location"})
-
-    # Clean output columns
-    return locations[
-        [
-            "rank",
-            "location",
-            "cohort_size",
-            "diabetes_count",
-            "prevalence_rate",
-        ]
-    ]
-
+def norm(v):
+    v = (v or "").strip()
+    return v if v != "" else "unknown"
 
 def main():
+    if len(sys.argv) < 2:
+        print("Usage: location_prevalence.py <DATASET_PATH> [DELIM]")
+        sys.exit(1)
 
-    validate_input()
+    dataset_path = sys.argv[1]
+    delim = sys.argv[2] if len(sys.argv) >= 3 else ","
 
-    OUTPUT_PATH.parent.mkdir(parents=True, exist_ok=True)
+    out_dir = "out/evidence"
+    os.makedirs(out_dir, exist_ok=True)
+    out_path = os.path.join(out_dir, "location_prevalence_profile.csv")
 
-    df = pd.read_csv(INPUT_PATH)
+    agg = defaultdict(lambda: [0,0])
 
-    location_summary = build_location_table(df)
+    with open(dataset_path, newline="") as f:
+        r = csv.DictReader(f, delimiter=delim)
+        for row in r:
+            loc = norm(row.get("location",""))
+            agg[loc][0] += 1
+            d = norm(row.get("diabetes",""))
+            if d in {"1","true","yes","y"}:
+                agg[loc][1] += 1
 
-    location_summary["prevalence_rate"] = location_summary["prevalence_rate"].round(4)
+    with open(out_path, "w", newline="") as out:
+        w = csv.writer(out)
+        w.writerow(["location","total","diabetes_count","prevalence"])
+        for loc, (n, dy) in agg.items():
+            prev = dy/n if n else 0.0
+            w.writerow([loc,n,dy,f"{prev:.6f}"])
 
-    location_summary.to_csv(OUTPUT_PATH, index=False)
-
-    print(f"Location prevalence summary written to {OUTPUT_PATH}")
-
+    print("Wrote:", out_path)
 
 if __name__ == "__main__":
     main()

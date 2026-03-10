@@ -14,6 +14,7 @@
 
 DATASET_PATH="${1:-}"
 RUN_LOG="out/run_sprint3.log"
+DELIM="${2:-,}"
 ERROR_LOG="out/errors.log"
 EVIDENCE_DIR="out/evidence"
 
@@ -48,19 +49,19 @@ echo "[2/7] Running feature engineering..." | tee -a "$RUN_LOG"
 python3 scripts/feature_engineering.py "$DATASET_PATH" >> "$RUN_LOG" 2>> "$ERROR_LOG"
 
 echo "[3/7] Building cohort prevalence summary..." | tee -a "$RUN_LOG"
-python3 scripts/cohort_analysis.py >> "$RUN_LOG" 2>> "$ERROR_LOG"
+python3 scripts/cohort_analysis.py "$DATASET_PATH" "$DELIM" >> "$RUN_LOG" 2>> "$ERROR_LOG"
 
 echo "[4/7] Ranking high-risk profiles..." | tee -a "$RUN_LOG"
-python3 scripts/rank_high_risk_profiles.py >> "$RUN_LOG" 2>> "$ERROR_LOG"
+python3 scripts/rank_high_risk_profiles.py "$DATASET_PATH" "$DELIM" >> "$RUN_LOG" 2>> "$ERROR_LOG"
 
 echo "[5/7] Building location prevalence summary..." | tee -a "$RUN_LOG"
-python3 scripts/location_prevalence.py >> "$RUN_LOG" 2>> "$ERROR_LOG"
+python3 scripts/location_prevalence.py "$DATASET_PATH" "$DELIM" >> "$RUN_LOG" 2>> "$ERROR_LOG"
 
 echo "[6/7] Building rule-based risk flags..." | tee -a "$RUN_LOG"
-python3 scripts/risk_rule_flags.py >> "$RUN_LOG" 2>> "$ERROR_LOG"
+python3 scripts/risk_rule_flags.py "$DATASET_PATH" "$DELIM" >> "$RUN_LOG" 2>> "$ERROR_LOG"
 
 echo "[7/7] Running assumption test..." | tee -a "$RUN_LOG"
-python3 scripts/assumption_test.py >> "$RUN_LOG" 2>> "$ERROR_LOG"
+python3 scripts/assumption_test.py "$DATASET_PATH" "$DELIM" >> "$RUN_LOG" 2>> "$ERROR_LOG"
 
 echo "" | tee -a "$RUN_LOG"
 echo "Sprint 3 pipeline completed." | tee -a "$RUN_LOG"

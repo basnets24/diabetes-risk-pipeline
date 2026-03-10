@@ -1,181 +1,92 @@
 #!/usr/bin/env python3
+"""
+data_quality.py (pandas-free)
 
+Usage:
+  python3 scripts/data_quality.py <DATASET_PATH> [DELIM]
+
+Example:
+  python3 scripts/data_quality.py data/samples/sample_1k.csv ","
+
+Outputs:
+  out/evidence/data_quality_report.txt
+"""
 import sys
-from pathlib import Path
-import pandas as pd
+import os
+import csv
+from collections import Counter
 
-RACE_COLUMNS = [
-    "race:AfricanAmerican",
-    "race:Asian",
-    "race:Caucasian",
-    "race:Hispanic",
-    "race:Other",
-]
+def is_missing(val: str) -> bool:
+    if val is None:
+        return True
+    v = val.strip()
+    if v == "":
+        return True
+    return v.lower() in {"na", "n/a", "null", "none", "nan", "unknown"}
 
-BINARY_COLUMNS = [
-    "hypertension",
-    "heart_disease",
-    "diabetes",
-    *RACE_COLUMNS,
-]
-
-NUMERIC_COLUMNS = [
-    "year",
-    "age",
-    "bmi",
-    "hbA1c_level",
-    "blood_glucose_level",
-]
-
-
-def get_dataset_path() -> Path:
-    if len(sys.argv) != 2:
-        print("Usage: python3 scripts/data_quality.py <dataset_path>")
+def main():
+    if len(sys.argv) < 2:
+        print("Usage: data_quality.py <DATASET_PATH> [DELIM]", file=sys.stderr)
         sys.exit(1)
 
-    dataset_path = Path(sys.argv[1])
-    if not dataset_path.exists():
-        print(f"Error: dataset not found at '{dataset_path}'")
-        sys.exit(1)
+    dataset_path = sys.argv[1]
+    delim = sys.argv[2] if len(sys.argv) >= 3 else ","
 
-    return dataset_path
+    if len(delim) != 1:
+        print("ERROR: DELIM must be a 1-character string (e.g. ',' or '\\t')", file=sys.stderr)
+        sys.exit(2)
 
+    if not os.path.isfile(dataset_path):
+        print(f"ERROR: dataset not found: {dataset_path}", file=sys.stderr)
+        sys.exit(3)
 
-def add_section(lines: list[str], title: str) -> None:
-    lines.append(title)
-    lines.append("-" * 60)
+    out_dir = "out/evidence"
+    os.makedirs(out_dir, exist_ok=True)
+    out_path = os.path.join(out_dir, "data_quality_report.txt")
 
+    total_rows = 0
+    header = None
+    col_missing = Counter()
+    col_total = Counter()
+    bad_rows = 0
 
-def get_null_count_lines(df: pd.DataFrame) -> list[str]:
-    null_counts = df.isna().sum().sort_values(ascending=False)
-    return [f"{column}: {count}" for column, count in null_counts.items()]
+    with open(dataset_path, newline="") as f:
+        reader = csv.reader(f, delimiter=delim)
+        header = next(reader, None)
+        if header is None:
+            raise SystemExit("ERROR: empty file")
 
+        num_cols = len(header)
+        for row in reader:
+            if len(row) == 0:
+                continue
+            total_rows += 1
+            if len(row) != num_cols:
+                bad_rows += 1
 
-def get_numeric_range_lines(df: pd.DataFrame) -> list[str]:
-    lines = []
-    for column in NUMERIC_COLUMNS:
-        if column not in df.columns:
-            continue
+            # pad/trim to header length for counting
+            row2 = (row + [""] * num_cols)[:num_cols]
+            for i, val in enumerate(row2):
+                col_total[i] += 1
+                if is_missing(val):
+                    col_missing[i] += 1
 
-        values = df[column].dropna()
-        if values.empty:
-            lines.append(f"{column}: all values are null")
-        else:
-            lines.append(f"{column}: min={values.min()}, max={values.max()}")
-    return lines
+    with open(out_path, "w") as out:
+        out.write("Sprint 3 Trust Check: Data Quality Report (pandas-free)\n")
+        out.write(f"Dataset: {dataset_path}\n")
+        out.write(f"Delimiter: {repr(delim)}\n\n")
+        out.write(f"Total data rows (excluding header): {total_rows}\n")
+        out.write(f"Header columns: {len(header)}\n")
+        out.write(f"Rows with wrong column count: {bad_rows}\n\n")
 
+        out.write("Missingness by column (missing/total, percent):\n")
+        for i, name in enumerate(header):
+            miss = col_missing[i]
+            tot = col_total[i] if col_total[i] else 0
+            pct = (miss / tot * 100.0) if tot else 0.0
+            out.write(f"- {name}: {miss}/{tot} ({pct:.2f}%)\n")
 
-def get_binary_validation_lines(df: pd.DataFrame) -> list[str]:
-    lines = []
-    for column in BINARY_COLUMNS:
-        if column not in df.columns:
-            continue
-
-        unique_values = sorted(df[column].dropna().unique().tolist())
-        invalid_count = int((~df[column].isin([0, 1]) & df[column].notna()).sum())
-        lines.append(
-            f"{column}: unique_values={unique_values}, invalid_count={invalid_count}"
-        )
-    return lines
-
-
-def get_diabetes_distribution_lines(df: pd.DataFrame) -> list[str]:
-    if "diabetes" not in df.columns:
-        return ["Skipped: diabetes column missing"]
-
-    total_rows = len(df)
-    counts = df["diabetes"].value_counts(dropna=False).sort_index()
-
-    lines = []
-    for value, count in counts.items():
-        percentage = (count / total_rows * 100) if total_rows else 0
-        lines.append(f"{value}: {count} ({percentage:.2f}%)")
-    return lines
-
-
-def get_race_consistency_lines(df: pd.DataFrame) -> list[str]:
-    if not all(column in df.columns for column in RACE_COLUMNS):
-        return ["Skipped: one or more race one-hot columns are missing."]
-
-    race_sum = df[RACE_COLUMNS].sum(axis=1)
-
-    return [
-        f"Rows with exactly one race flag = 1: {(race_sum == 1).sum()}",
-        f"Rows with all race flags = 0: {(race_sum == 0).sum()}",
-        f"Rows with multiple race flags = 1: {(race_sum > 1).sum()}",
-        f"Rows with non-binary values in race columns: {(~df[RACE_COLUMNS].isin([0, 1])).any(axis=1).sum()}",
-    ]
-
-
-def get_invalid_value_lines(df: pd.DataFrame) -> list[str]:
-    lines = []
-
-    if "age" in df.columns:
-        lines.append(f"age outside [0, 120]: {((df['age'] < 0) | (df['age'] > 120)).sum()}")
-
-    if "bmi" in df.columns:
-        lines.append(f"negative bmi values: {(df['bmi'] < 0).sum()}")
-
-    if "year" in df.columns:
-        lines.append(f"year outside [1900, 2100]: {((df['year'] < 1900) | (df['year'] > 2100)).sum()}")
-
-    if "hbA1c_level" in df.columns:
-        lines.append(f"negative hbA1c_level values: {(df['hbA1c_level'] < 0).sum()}")
-
-    if "blood_glucose_level" in df.columns:
-        lines.append(f"negative blood_glucose_level values: {(df['blood_glucose_level'] < 0).sum()}")
-
-    return lines if lines else ["No invalid value checks were run."]
-
-
-def build_report(df: pd.DataFrame, dataset_path: Path) -> str:
-    lines: list[str] = []
-
-    lines.append("DATA QUALITY REPORT")
-    lines.append("=" * 60)
-    lines.append(f"Dataset path: {dataset_path}")
-    lines.append(f"Rows: {len(df)}")
-    lines.append(f"Columns: {len(df.columns)}")
-    lines.append("")
-
-    add_section(lines, "NULL COUNTS BY COLUMN")
-    lines.extend(get_null_count_lines(df))
-    lines.append("")
-
-    add_section(lines, "NUMERIC RANGES")
-    lines.extend(get_numeric_range_lines(df))
-    lines.append("")
-
-    add_section(lines, "BINARY FIELD VALIDATION")
-    lines.extend(get_binary_validation_lines(df))
-    lines.append("")
-
-    add_section(lines, "DIABETES CLASS DISTRIBUTION")
-    lines.extend(get_diabetes_distribution_lines(df))
-    lines.append("")
-
-    add_section(lines, "RACE ONE-HOT CONSISTENCY CHECK")
-    lines.extend(get_race_consistency_lines(df))
-    lines.append("")
-
-    add_section(lines, "INVALID VALUE CHECKS")
-    lines.extend(get_invalid_value_lines(df))
-    lines.append("")
-
-    return "\n".join(lines)
-
-
-def main() -> None:
-    dataset_path = get_dataset_path()
-    output_path = Path("out/evidence/data_quality_report.txt")
-    output_path.parent.mkdir(parents=True, exist_ok=True)
-
-    df = pd.read_csv(dataset_path)
-    report = build_report(df, dataset_path)
-
-    output_path.write_text(report, encoding="utf-8")
-    print(f"Data quality report written to {output_path}")
-
+    print("Wrote:", out_path)
 
 if __name__ == "__main__":
     main()
