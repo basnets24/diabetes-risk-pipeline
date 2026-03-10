@@ -1,94 +1,167 @@
 #!/usr/bin/env python3
-"""
-cohort_analysis.py (pandas-free)
 
-Builds a cohort prevalence summary by (age_bucket, bmi_bucket, gender, smoking_history,
-hypertension, heart_disease, location). Outputs CSV with cohort_size, diabetes_count, prevalence.
-
-Usage:
-  python3 scripts/cohort_analysis.py <DATASET_PATH> [DELIM]
-
-Example:
-  python3 scripts/cohort_analysis.py data/samples/sample_1k.csv ","
-
-Output:
-  out/evidence/cohort_prevalence_summary.csv
-"""
-import sys, os, csv
+import csv
+from pathlib import Path
 from collections import defaultdict
 
-def age_bucket(age):
-    try:
-        a = float(age)
-    except:
-        return "unknown"
-    if a < 18: return "<18"
-    if a < 30: return "18-29"
-    if a < 45: return "30-44"
-    if a < 60: return "45-59"
-    return "60+"
+# Input produced by feature_engineering.py
+INPUT_PATH = Path("out/cleaned_diabetes_data.csv")
 
-def bmi_bucket(bmi):
-    try:
-        b = float(bmi)
-    except:
-        return "unknown"
-    if b < 18.5: return "underweight"
-    if b < 25: return "normal"
-    if b < 30: return "overweight"
-    return "obese"
+# Final evidence artifact for cohort comparison
+OUTPUT_PATH = Path("out/evidence/cohort_prevalence_summary.csv")
 
-def norm(v):
-    v = (v or "").strip()
-    return v if v != "" else "unknown"
+# Cohort dimensions we want to analyze
+COHORT_COLUMNS = [
+    "age_bucket",
+    "race",
+    "gender",
+    "bmi_bucket",
+    "hypertension",
+    "heart_disease",
+    "smoking_history",
+    "location",
+]
 
-def main():
-    if len(sys.argv) < 2:
-        print("Usage: cohort_analysis.py <DATASET_PATH> [DELIM]", file=sys.stderr)
-        sys.exit(1)
 
-    dataset_path = sys.argv[1]
-    delim = sys.argv[2] if len(sys.argv) >= 3 else ","
-    if len(delim) != 1:
-        print("ERROR: DELIM must be 1 character", file=sys.stderr)
-        sys.exit(2)
+def validate_input() -> None:
+    # Make sure the cleaned dataset exists before running aggregation
+    if not INPUT_PATH.exists():
+        raise FileNotFoundError(
+            f"Cleaned dataset not found at {INPUT_PATH}. Run feature_engineering.py first."
+        )
 
-    out_dir = "out/evidence"
-    os.makedirs(out_dir, exist_ok=True)
-    out_path = os.path.join(out_dir, "cohort_prevalence_summary.csv")
 
-    # key -> [total, diabetes_yes]
-    agg = defaultdict(lambda: [0, 0])
+def parse_diabetes_value(value: str):
+    """
+    Convert the diabetes field into an integer 0 or 1 when possible.
 
-    with open(dataset_path, newline="") as f:
-        r = csv.DictReader(f, delimiter=delim)
-        for row in r:
-            k = (
-                age_bucket(row.get("age","")),
-                bmi_bucket(row.get("bmi","")),
-                norm(row.get("gender","")),
-                norm(row.get("smoking_history","")),
-                norm(row.get("hypertension","")),
-                norm(row.get("heart_disease","")),
-                norm(row.get("location","")),
-            )
-            agg[k][0] += 1
-            d = norm(row.get("diabetes",""))
-            if d in {"1", "true", "yes", "y"}:
-                agg[k][1] += 1
+    Returns:
+        0 or 1 if valid
+        None if the value is missing or invalid
+    """
+    if value is None:
+        return None
 
-    with open(out_path, "w", newline="") as out:
-        w = csv.writer(out)
-        w.writerow([
-            "age_bucket","bmi_bucket","gender","smoking_history",
-            "hypertension","heart_disease","location",
-            "cohort_size","diabetes_count","prevalence"
-        ])
-        for k, (n, dy) in agg.items():
-            prev = (dy / n) if n else 0.0
-            w.writerow(list(k) + [n, dy, f"{prev:.6f}"])
+    cleaned = str(value).strip()
 
-    print("Wrote:", out_path)
+    if cleaned in {"0", "0.0"}:
+        return 0
+    if cleaned in {"1", "1.0"}:
+        return 1
+
+    return None
+
+
+def compute_cohort_summary(rows: list[dict], column: str) -> list[dict]:
+    """
+    Build one cohort summary table for a single cohort dimension.
+
+    For example, if column = "race", this function will produce rows like:
+    - race, Asian, total rows, diabetes cases, prevalence
+    - race, Hispanic, total rows, diabetes cases, prevalence
+    """
+    # Track:
+    # - cohort_size: how many rows belong to each cohort value
+    # - diabetes_count: how many of those rows have diabetes = 1
+    cohort_size = defaultdict(int)
+    diabetes_count = defaultdict(int)
+
+    for row in rows:
+        # Skip the column if it does not exist in the current row
+        if column not in row:
+            continue
+
+        cohort_value = row[column]
+
+        # Count every row in that cohort bucket
+        cohort_size[cohort_value] += 1
+
+        # Count diabetes cases only when diabetes is a valid binary value
+        diabetes_value = parse_diabetes_value(row.get("diabetes", ""))
+        if diabetes_value == 1:
+            diabetes_count[cohort_value] += 1
+
+    summary_rows = []
+
+    # Sort cohort values for stable, predictable output
+    for cohort_value in sorted(cohort_size, key=lambda x: str(x)):
+        size = cohort_size[cohort_value]
+        d_count = diabetes_count[cohort_value]
+
+        # Prevalence rate = diabetes cases / total cohort size
+        prevalence_rate = (d_count / size) if size else 0.0
+
+        summary_rows.append(
+            {
+                "cohort_dimension": column,
+                "cohort_value": cohort_value,
+                "cohort_size": size,
+                "diabetes_count": d_count,
+                "prevalence_rate": round(prevalence_rate, 4),
+            }
+        )
+
+    return summary_rows
+
+
+def build_cohort_table(rows: list[dict]) -> list[dict]:
+    """
+    Build one combined cohort prevalence table across all cohort dimensions.
+    """
+    tables = []
+
+    # Build one summary block per cohort column
+    for column in COHORT_COLUMNS:
+        if not rows:
+            continue
+
+        # If the column is missing entirely from the cleaned dataset, skip it
+        if column not in rows[0]:
+            continue
+
+        cohort_table = compute_cohort_summary(rows, column)
+        tables.extend(cohort_table)
+
+    return tables
+
+
+def main() -> None:
+    validate_input()
+
+    # Ensure the evidence output folder exists
+    OUTPUT_PATH.parent.mkdir(parents=True, exist_ok=True)
+
+    cleaned_rows = []
+
+    # Read the cleaned intermediate dataset produced by feature_engineering.py
+    with INPUT_PATH.open("r", newline="", encoding="utf-8") as f:
+        reader = csv.DictReader(f)
+
+        if reader.fieldnames is None:
+            raise ValueError("Cleaned dataset is empty or missing a header row.")
+
+        for row in reader:
+            cleaned_rows.append(row)
+
+    # Generate the full cohort prevalence summary
+    cohort_summary = build_cohort_table(cleaned_rows)
+
+    # Write the evidence artifact as CSV
+    with OUTPUT_PATH.open("w", newline="", encoding="utf-8") as f:
+        fieldnames = [
+            "cohort_dimension",
+            "cohort_value",
+            "cohort_size",
+            "diabetes_count",
+            "prevalence_rate",
+        ]
+
+        writer = csv.DictWriter(f, fieldnames=fieldnames)
+        writer.writeheader()
+        writer.writerows(cohort_summary)
+
+    print(f"Cohort prevalence summary written to {OUTPUT_PATH}")
+
 
 if __name__ == "__main__":
     main()
