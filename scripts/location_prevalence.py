@@ -1,54 +1,171 @@
 #!/usr/bin/env python3
-"""
-location_prevalence.py (pandas-free)
 
-Computes diabetes prevalence by location.
+import csv
+from pathlib import Path
 
-Usage:
-  python3 scripts/location_prevalence.py <DATASET_PATH> [DELIM]
+# Input artifact produced by cohort_analysis.py
+INPUT_PATH = Path("out/evidence/cohort_prevalence_summary.csv")
 
-Output:
-  out/evidence/location_prevalence_profile.csv
-"""
+# Output artifact for location analysis
+OUTPUT_PATH = Path("out/evidence/location_prevalence_profile.csv")
 
-import sys, os, csv
-from collections import defaultdict
+# Remove very small cohorts
+MIN_COHORT_SIZE = 500
 
-def norm(v):
-    v = (v or "").strip()
-    return v if v != "" else "unknown"
 
-def main():
-    if len(sys.argv) < 2:
-        print("Usage: location_prevalence.py <DATASET_PATH> [DELIM]")
-        sys.exit(1)
+def validate_input() -> None:
+    # Ensure the cohort summary exists before building the location artifact
+    if not INPUT_PATH.exists():
+        raise FileNotFoundError(
+            f"Cohort summary not found at {INPUT_PATH}. Run cohort_analysis.py first."
+        )
 
-    dataset_path = sys.argv[1]
-    delim = sys.argv[2] if len(sys.argv) >= 3 else ","
 
-    out_dir = "out/evidence"
-    os.makedirs(out_dir, exist_ok=True)
-    out_path = os.path.join(out_dir, "location_prevalence_profile.csv")
+def parse_int_value(value: str):
+    """
+    Convert a CSV string into an integer when possible.
 
-    agg = defaultdict(lambda: [0,0])
+    Returns:
+        int if valid
+        None if missing or invalid
+    """
+    if value is None:
+        return None
 
-    with open(dataset_path, newline="") as f:
-        r = csv.DictReader(f, delimiter=delim)
-        for row in r:
-            loc = norm(row.get("location",""))
-            agg[loc][0] += 1
-            d = norm(row.get("diabetes",""))
-            if d in {"1","true","yes","y"}:
-                agg[loc][1] += 1
+    cleaned = str(value).strip()
+    if cleaned == "":
+        return None
 
-    with open(out_path, "w", newline="") as out:
-        w = csv.writer(out)
-        w.writerow(["location","total","diabetes_count","prevalence"])
-        for loc, (n, dy) in agg.items():
-            prev = dy/n if n else 0.0
-            w.writerow([loc,n,dy,f"{prev:.6f}"])
+    try:
+        return int(cleaned)
+    except ValueError:
+        try:
+            numeric_value = float(cleaned)
+            if numeric_value.is_integer():
+                return int(numeric_value)
+        except ValueError:
+            pass
 
-    print("Wrote:", out_path)
+    return None
+
+
+def parse_float_value(value: str):
+    """
+    Convert a CSV string into a float when possible.
+
+    Returns:
+        float if valid
+        None if missing or invalid
+    """
+    if value is None:
+        return None
+
+    cleaned = str(value).strip()
+    if cleaned == "":
+        return None
+
+    try:
+        return float(cleaned)
+    except ValueError:
+        return None
+
+
+def build_location_table(rows: list[dict]) -> list[dict]:
+    """
+    Build a ranked location prevalence table.
+
+    Steps:
+    1. Keep only rows where cohort_dimension == "location"
+    2. Remove locations smaller than MIN_COHORT_SIZE
+    3. Sort by prevalence descending
+    4. Add a 1-based rank column
+    5. Rename cohort_value to location in the final output
+    """
+    location_rows = []
+
+    for row in rows:
+        # Keep only the rows representing location cohorts
+        if row.get("cohort_dimension", "") != "location":
+            continue
+
+        cohort_size = parse_int_value(row.get("cohort_size", ""))
+        diabetes_count = parse_int_value(row.get("diabetes_count", ""))
+        prevalence_rate = parse_float_value(row.get("prevalence_rate", ""))
+
+        # Skip rows that are missing required numeric values
+        if cohort_size is None or diabetes_count is None or prevalence_rate is None:
+            continue
+
+        # Remove very small location cohorts
+        if cohort_size < MIN_COHORT_SIZE:
+            continue
+
+        location_rows.append(
+            {
+                "location": row.get("cohort_value", ""),
+                "cohort_size": cohort_size,
+                "diabetes_count": diabetes_count,
+                "prevalence_rate": prevalence_rate,
+            }
+        )
+
+    # Sort by prevalence descending
+    location_rows.sort(key=lambda row: row["prevalence_rate"], reverse=True)
+
+    ranked_rows = []
+
+    # Add a 1-based rank column for stakeholder-friendly output
+    for index, row in enumerate(location_rows, start=1):
+        ranked_rows.append(
+            {
+                "rank": index,
+                "location": row["location"],
+                "cohort_size": row["cohort_size"],
+                "diabetes_count": row["diabetes_count"],
+                "prevalence_rate": round(row["prevalence_rate"], 4),
+            }
+        )
+
+    return ranked_rows
+
+
+def main() -> None:
+    validate_input()
+
+    # Ensure the output directory exists
+    OUTPUT_PATH.parent.mkdir(parents=True, exist_ok=True)
+
+    input_rows = []
+
+    # Read the cohort prevalence summary produced by cohort_analysis.py
+    with INPUT_PATH.open("r", newline="", encoding="utf-8") as f:
+        reader = csv.DictReader(f)
+
+        if reader.fieldnames is None:
+            raise ValueError("Cohort prevalence summary is empty or missing a header row.")
+
+        for row in reader:
+            input_rows.append(row)
+
+    # Build the ranked location prevalence table
+    location_summary = build_location_table(input_rows)
+
+    # Write the final location artifact
+    with OUTPUT_PATH.open("w", newline="", encoding="utf-8") as f:
+        fieldnames = [
+            "rank",
+            "location",
+            "cohort_size",
+            "diabetes_count",
+            "prevalence_rate",
+        ]
+
+        writer = csv.DictWriter(f, fieldnames=fieldnames)
+        writer.writeheader()
+        writer.writerows(location_summary)
+
+    print(f"Location prevalence summary written to {OUTPUT_PATH}")
+
 
 if __name__ == "__main__":
     main()
