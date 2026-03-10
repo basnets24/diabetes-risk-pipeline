@@ -25,11 +25,11 @@ diabetes: 0
 
 NUMERIC RANGES
 ------------------------------------------------------------
-year: min=2015, max=2022
-age: min=0.08, max=80.0
-bmi: min=10.01, max=95.69
-hbA1c_level: min=3.5, max=9.0
-blood_glucose_level: min=80, max=300
+year: min=2015.0, max=2022.0, non_numeric_count=0
+age: min=0.08, max=80.0, non_numeric_count=0
+bmi: min=10.01, max=95.69, non_numeric_count=0
+hbA1c_level: min=3.5, max=9.0, non_numeric_count=0
+blood_glucose_level: min=80.0, max=300.0, non_numeric_count=0
 
 BINARY FIELD VALIDATION
 ------------------------------------------------------------
