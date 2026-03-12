@@ -25,8 +25,6 @@ https://www.kaggle.com/datasets/priyamchoksi/100000-diabetes-clinical-dataset/da
 **Description:**
 This dataset contains anonymized clinical information related to diabetes. It includes patient demographics, clinical measurements such as blood glucose and HbA1c, and indicators of related conditions like hypertension and heart disease. The data is structured and suitable for large-scale analysis.
 
-**Justification:**
-Diabetes is one of the leading chronic diseases that affect the population of the United States. Early identification of high-risk population segments would allow the health authorities to direct limited prevention budgets toward the groups that are most likely to benefit from the targeted outreach. We have analyzed clinical and demographic patterns in a structured dataset of 100,000 individuals spanning years 2015 to 2022 to identify which specific groups are at the highest risk.
 ---
 ## Data Card Section 
 
