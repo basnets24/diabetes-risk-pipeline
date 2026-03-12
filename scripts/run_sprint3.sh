@@ -4,7 +4,7 @@
 #
 # Example usage:
 #   ./scripts/run_sprint3.sh ../diabetes_prediction_dataset.csv
-#
+#   absolute data path: /mnt/scratch/CS131_jelenag/projects/team10_sec3/diabetes_dataset.csv
 # This script:
 # - accepts the dataset path as an argument
 # - writes all evidence artifacts into out/evidence/
@@ -21,7 +21,7 @@ EVIDENCE_DIR="out/evidence"
 
 if [ -z "$DATASET_PATH" ]; then
     echo "Usage: ./scripts/run_sprint3.sh <dataset_path>"
-    echo "Example: ./scripts/run_sprint3.sh data/diabetes_prediction_dataset.csv"
+    echo "Example: ./scripts/run_sprint3.sh /mnt/scratch/CS131_jelenag/projects/team10_sec3/diabetes_dataset.csv"
     exit 1
 fi
 
