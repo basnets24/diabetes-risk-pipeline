@@ -1,12 +1,12 @@
 # Meeting 2: Decision Review and Finalize Brief
 
 
-File path: docs/meetings/meeting2_agenda.md
-Team: Team10
-Date/Time: 2026-03-08 9:00 PM
-Duration: 60 minutes
-Facilitator (PM): Justin Tan
-Notetaker: Krish Makwana
+File path: docs/meetings/meeting2_agenda.md<br>
+Team: Team10<br>
+Date/Time: 2026-03-08 9:00 PM<br>
+Duration: 60 minutes<br>
+Facilitator (PM): Justin Tan<br>
+Notetaker: Krish Makwana<br>
 
 Goal of the meeting:
 Review evidence artifacts, agree on a recommendation, and finalize the Decision Brief and Action Plan.
@@ -66,17 +66,17 @@ Artifacts:
 - Why it matters: It validates that the cohort segmentation logic is sound and that no structural data issues exist that could negatively impact the prevalence calculations.
 - Caveats: High repetition in the ID field reflects year distribution across the dataset, and not the duplicate patient records.  
 
-3) Recommendation drafting (10 to 15 min)
+3) Recommendation drafting (10 to 15 min)<br>
 Draft 1 to 3 recommendation bullets and verify they are supported by evidence.
 - R1: Prioritize immediate screening outreach for the top 3 cohorts identified in ranked_high_risk_profiles.csv (Heart disease, Hypertension, and 70+ Age)
 - R2: Allocate additional budget to regions with the highest prevalence of “Former” or “Current” smokers over age 55.
 - R3: Use the rule-based screening criteria in out/evidence/risk_rule_flags.csv to identify the individuals that match two or more high-risk flags as priority candidates for outreach programs.
-- R4: Prioritize funding for top-N high-prevalence locations identified in out/evidence/location_prevalence_profile.csv
+- R4: Prioritize funding for top-N high-prevalence locations identified in out/evidence/location_prevalence_profile.csv.
 
 
-4) Action plan finalization (10 min)
+4) Action plan finalization (10 min)<br>
 Confirm owners, due dates, and definitions of done for remaining deliverables.
 
-5) Wrap (2 min)
+5) Wrap (2 min)<br>
 Confirm the plan, finalize the Decision Brief and the remaining tasks.
 

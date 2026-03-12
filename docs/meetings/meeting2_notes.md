@@ -1,9 +1,9 @@
 # Meeting 2 Notes: Decision Review and Finalize Brief
 
-Date/Time: 2026-03-08 9:00 PM
-Facilitator: Justin Tan
-Notetaker: Krish Makwana
-Attendees: Sneha Basnet, Prathana Rajeshkumar Dankhara
+Date/Time: 2026-03-08 9:00 PM<br>
+Facilitator: Justin Tan<br>
+Notetaker: Krish Makwana<br>
+Attendees: Sneha Basnet, Prathana Rajeshkumar Dankhara<br>
 
 Evidence reviewed
 - A1: out/evidence/cohort_prevalence_summary.csv
