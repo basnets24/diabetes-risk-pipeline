@@ -1,7 +1,0 @@
-rule_name,matched_rows,diabetes_count,prevalence_rate
-Hypertension AND Obese,3246,1143,0.3521
-Heart Disease,3942,1267,0.3214
-Age 55+ AND Obese,9293,2833,0.3049
-Hypertension,7485,2088,0.279
-Age 55+,32262,5974,0.1852
-BMI Obese,23536,4233,0.1799
