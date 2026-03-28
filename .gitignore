@@ -211,3 +211,10 @@ cython_debug/
 marimo/_static/
 marimo/_lsp/
 __marimo__/
+# PA4 outputs
+out/
+logs/
+# temp / backups
+*.bak
+scripts_backup_*/
+sprint3_env/
