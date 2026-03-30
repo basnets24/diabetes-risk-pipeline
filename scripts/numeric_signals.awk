@@ -1,5 +1,5 @@
 BEGIN {
-    FS = ","
+    FS = "\t"
     OFS = "\t"
 }
 
@@ -44,10 +44,10 @@ NR == 1 {
 
 END {
     for (key in count) {
-        rate = diabetes_count[key] / count[key]
-        mean_bmi = sum_bmi[key] / count[key]
-        mean_hba1c = sum_hba1c[key] / count[key]
-        mean_glucose = sum_glucose[key] / count[key]
+        rate = (count[key] > 0 ? diabetes_count[key] / count[key] : 0)
+mean_bmi = (count[key] > 0 ? sum_bmi[key] / count[key] : 0)
+mean_hba1c = (count[key] > 0 ? sum_hba1c[key] / count[key] : 0)
+mean_glucose = (count[key] > 0 ? sum_glucose[key] / count[key] : 0)
 
         printf "%s\t%d\t%.4f\t%.4f\t%.4f\t%.4f\t%.4f\t%.4f\t%.4f\t%.4f\t%.4f\t%.4f\t%.4f\n",
             key,
