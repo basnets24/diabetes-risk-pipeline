@@ -1,5 +1,5 @@
 BEGIN {
-    FS = ","
+    FS = "\t"
     OFS = "\t"
 }
 
