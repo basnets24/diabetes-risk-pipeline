@@ -1,10 +1,11 @@
 BEGIN {
-    FS = ","
+    FS = "\t"
     OFS = "\t"
 }
 
 NR == 1 {
     for (i = 1; i <= NF; i++) {
+        gsub(/^[ \t]+|[ \t]+$/, "", $i)
         h[$i] = i
     }
     next
