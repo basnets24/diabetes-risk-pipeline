@@ -70,7 +70,8 @@ print(f"Feature Vector Dimension: {sample_vector.size}")
 
 # Step 8: Save the feature table back to Google Cloud Storage
 OUTPUT_PATH_feature_table="gs://team10-diabetes-data/features/feature_table"
-feature_table.write.mode("overwrite").parquet(OUTPUT_PATH_feature_table)
+final_to_save=feature_table.select("features", "diabetes")
+final_to_save.write.mode("overwrite").parquet(OUTPUT_PATH_feature_table)
 
 # Step 9: Stop Spark Session
 spark.stop()
