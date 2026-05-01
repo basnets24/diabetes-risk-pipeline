@@ -4,6 +4,9 @@ data/raw_data/diabetes_dataset.csv
 # Generated Parquet outputs — reproduced by running 01_preprocessing.ipynb
 data/final_df/
 
+# Generated plot images — reproduced by running dataset_overview.ipynb
+diabetes_pipeline/visualization/images/
+
 
 .DS_Store
 
