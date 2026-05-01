@@ -1,4 +1,9 @@
 out/cleaned_diabetes_data.csv
+data/raw_data/diabetes_dataset.csv
+
+# Generated Parquet outputs — reproduced by running 01_preprocessing.ipynb
+data/final_df/
+
 
 .DS_Store
 
