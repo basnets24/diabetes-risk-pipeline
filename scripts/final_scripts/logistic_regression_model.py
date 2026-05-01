@@ -34,5 +34,10 @@ MODEL_PATH="gs://team10-diabetes-data/models/logistic_regression"
 lr_model.write().overwrite().save(MODEL_PATH)
 print(f"SUCCESS: Model saved to {MODEL_PATH}")
 
+# Step 6.5: Save the predictions data to GCS
+PREDICTIONS_PATH="gs://team10-diabetes-data/predictions/logistic_regression"
+predictions.write.mode("overwrite").parquet(PREDICTIONS_PATH)
+print(f"SUCCESS: Predictions saved to {PREDICTIONS_PATH}")
+
 # Step 7: Stop Spark
 spark.stop()
