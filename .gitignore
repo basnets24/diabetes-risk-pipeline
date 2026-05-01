@@ -1,5 +1,7 @@
 out/cleaned_diabetes_data.csv
 
+.DS_Store
+
 # Dataset files
 *.tsv
 *.xlsx
