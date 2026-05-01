@@ -1,12 +1,12 @@
 # Imports
 from pyspark.sql import SparkSession
-from pyspark.ml.classification import LogisticRegression
+from pyspark.ml.classification import RandomForestClassifier
 from pyspark.ml.functions import vector_to_array
 from pyspark.sql.functions import col, when
 
 # Step 1: Create Spark Session
 spark = SparkSession.builder \
-    .appName("DiabetesLogisticRegression") \
+    .appName("DiabetesRandomForest") \
     .config("spark.sql.shuffle.partitions", "8") \
     .getOrCreate()
 
@@ -14,7 +14,7 @@ spark = SparkSession.builder \
 TRAIN_PATH = "gs://team10-diabetes-data/features/train_feature_table"
 TEST_PATH  = "gs://team10-diabetes-data/features/test_feature_table"
 
-test_df = spark.read.parquet(TEST_PATH)
+test_df = spark.read.parquet(TEST_PATH).coalesce(2)
 
 # Step 3: Class weights 
 counts = {r["diabetes"]: r["count"]
@@ -23,29 +23,32 @@ total = sum(counts.values())
 pos   = counts.get(1, 0)
 neg   = counts.get(0, 0)
 
-weight_for_1 = neg / total
-weight_for_0 = pos / total
-
 print(f"Train rows: {total}")
-print(f"Weight for diabetic (1):     {weight_for_1:.4f}")
-print(f"Weight for non-diabetic (0): {weight_for_0:.4f}")
+print(f"Weight for diabetic (1):     {neg / total:.4f}")
+print(f"Weight for non-diabetic (0): {pos / total:.4f}")
 
-# Step 4: Train Logistic Regression — read train fresh so heap is free for gradient computation
-train_df = spark.read.parquet(TRAIN_PATH).withColumn("classWeight",
-    when(col("diabetes") == 1, weight_for_1).otherwise(weight_for_0)
+# Step 4: Train Random Forest — repartition(2) for tree building
+train_df = spark.read.parquet(TRAIN_PATH).repartition(2).withColumn("classWeight",
+    when(col("diabetes") == 1, neg / total).otherwise(pos / total)
 )
 
-lr = LogisticRegression(
-    featuresCol="features",
+rf = RandomForestClassifier(
     labelCol="diabetes",
+    featuresCol="features",
     predictionCol="prediction",
     weightCol="classWeight",
-    maxIter=100
+    numTrees=20,
+    maxDepth=3,
+    maxBins=16,
+    subsamplingRate=0.7,
+    seed=42
 )
-lr_model = lr.fit(train_df)
+
+rf_model = rf.fit(train_df)
+print("Model trained")
 
 # Step 5: Generate predictions and assign risk categories
-predictions = lr_model.transform(test_df)
+predictions = rf_model.transform(test_df)
 predictions = predictions.withColumn("prob_diabetic", vector_to_array(col("probability")).getItem(1))
 predictions = predictions.withColumn(
     "risk_category",
@@ -54,19 +57,19 @@ predictions = predictions.withColumn(
     .otherwise("Low Risk")
 )
 
-# Step 6: Save predictions in one pass 
+# Step 5b: Save predictions in one pass — no cache, single GCS write scan
 # (keep probability so eval job can compute AUC with BinaryClassificationEvaluator)
 save_cols = [c for c in predictions.columns if c not in ("rawPrediction", "classWeight")]
 predictions.select(save_cols).write.mode("overwrite").parquet(
-    "gs://team10-diabetes-data/predictions/logistic_regression"
+    "gs://team10-diabetes-data/predictions/random_forest"
 )
 print("Predictions saved")
 
-# Step 7: Save model
-lr_model.write().overwrite().save(
-    "gs://team10-diabetes-data/models/logistic_regression"
+# Step 6: Save model
+rf_model.write().overwrite().save(
+    "gs://team10-diabetes-data/models/random_forest"
 )
 print("Model saved")
 
-# Step 8: Stop Spark
+# Step 7: Stop Spark
 spark.stop()
