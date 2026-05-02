@@ -1,0 +1,135 @@
+Logistic Regression — Diabetes Risk Classification
+====================================================
+
+Overview
+--------
+We use a logistic regression model to estimate each patient's probability of
+having diabetes. The output is a calibrated probability (0–1) that reflects
+true population prevalence, which we then use to classify patients into
+Low / Medium / High risk bands.
+
+The pipeline runs across four Spark jobs on Google Dataproc, writing
+intermediate results to GCS at each step.
+
+
+
+Title:
+Diabetes Risk Prediction Model
+
+Body:
+Estimates each patient’s probability of diabetes
+Uses clinical features (e.g. glucose, BMI, age)
+Calibrated so probabilities reflect real-world risk
+Key Result:
+Top 10% of patients → ~60% diabetes rate
+Bottom 80% → ~1%
+Impact:
+Enables targeted screening and early intervention
+
+
+
+Pipeline Steps
+--------------
+
+1. Model Training (03_01_lr_model.py)
+   - Loads the pre-split stratified train set from GCS (Parquet).
+   - Computes class weights from the training label distribution to
+     handle class imbalance (diabetic patients are ~8% of the population).
+     weight_for_1 = neg / total,  weight_for_0 = pos / total
+   - Fits a StandardScaler (zero mean, unit variance) on the training set
+     only. This is necessary because LR uses gradient descent and unscaled
+     features (e.g. glucose 80–400 vs binary 0/1) cause uneven convergence.
+   - Trains LogisticRegression with the class-weighted samples (maxIter=20).
+   - Saves the trained LR model and scaler to GCS.
+
+2. Platt Calibration — Fit (03_03_lr_calibration.py)
+   - The raw LR model is overconfident due to class weighting. In our data
+     it predicted an average probability of ~0.215 when true prevalence is
+     ~0.082 — a 2.6× overestimate.
+   - Platt scaling corrects this by fitting a second logistic regression on
+     the calibration set: it maps raw LR scores to calibrated probabilities
+     that match true prevalence.
+   - The calibration set is scored by the LR model. Feature columns are
+     dropped immediately after extracting the probability to avoid OOM.
+   - The scored set is checkpointed to GCS before fitting to break the
+     Spark lineage chain and free executor memory.
+   - The fitted Platt model is saved to GCS.
+
+3. Platt Calibration — Apply (03_03b_lr_apply_calibration.py)
+   - Loads the LR model, scaler, and Platt model.
+   - Applies the full pipeline (scale → LR score → Platt scale) to both
+     the calibration and test sets, again dropping feature vectors
+     immediately after the LR transform to keep memory usage low.
+   - Saves calibrated predictions (prob_diabetic_raw, prob_diabetic,
+     platt_prediction, diabetes) to GCS.
+   - Prints a calibration check for each split:
+       pre-cal avg  ~0.215   (raw LR)
+       post-cal avg ~0.082   (after Platt)
+       true prev    ~0.082   (ground truth)
+     post-cal avg ≈ true prevalence confirms calibration succeeded.
+
+4. Evaluation and Risk Stratification (03_04_risk.py)
+   - Loads calibrated predictions for cal and test sets into pandas
+     (small collect — only prob_diabetic and diabetes columns).
+
+   AUC:
+   - Computes AUC-ROC and AUC-PR on calibrated test probabilities.
+   - AUC is rank-based so calibration does not change these values, but
+     they are computed here to keep all final metrics in one place.
+
+   Brier score:
+   - Mean squared error between predicted probability and true label.
+     Lower is better; 0 is perfect.
+
+   Confusion matrix (calibrated):
+   - Re-tunes the classification threshold on calibrated cal-set
+     probabilities using F2-max, giving a threshold on the interpretable
+     0–1 probability scale (e.g. 0.15 = flag anyone estimated >15% risk).
+   - Computes sensitivity, specificity, precision, F1, accuracy on the
+     calibrated test set. This is the production confusion matrix.
+
+   Risk stratification:
+   - Derives band thresholds from the 80th and 90th percentiles of
+     prob_diabetic on the calibration set.
+   - Assigns each test patient to Low / Medium / High risk in Spark.
+   - Saves the stratified predictions and a per-band summary (n,
+     avg_prob, diabetic_rate) to GCS.
+
+   All metrics (AUC, Brier, threshold, confusion matrix) are saved to
+   GCS as a single CSV for use in reporting.
+
+
+How the Output Is Used
+----------------------
+The final deliverable for each patient is:
+
+  prob_diabetic   — calibrated probability of diabetes (0–1).
+                    Interpretable: 0.20 means an estimated 20% chance.
+
+  risk_band       — Low / Medium / High, derived from population
+                    percentiles on the calibration set.
+                    Low:    bottom 80% by predicted risk
+                    Medium: 80th–90th percentile
+                    High:   top 10% by predicted risk
+
+In a clinical setting:
+  - High band patients are prioritised for follow-up testing or
+    early intervention.
+  - Medium band patients may be flagged for lifestyle counselling.
+  - Low band patients are considered low priority for diabetes screening.
+
+The calibration table validates that prob_diabetic is reliable: a patient
+assigned 0.30 truly has approximately a 30% chance of being diabetic. This
+is what makes the probability actionable rather than just a ranking score.
+
+
+GCS Outputs
+-----------
+models/lr_model                        trained LR model
+models/lr_scaler                       fitted StandardScaler
+models/platt_model                     fitted Platt calibration model
+predictions/lr_calibrated_cal          calibrated cal-set predictions
+predictions/lr_calibrated_test         calibrated test-set predictions
+predictions/lr_risk_stratified         test set with risk_band column
+evaluation/metrics_lr/                 AUC, Brier, calibrated confusion matrix
+evaluation/risk_summary_lr/            per-band n, avg_prob, diabetic_rate

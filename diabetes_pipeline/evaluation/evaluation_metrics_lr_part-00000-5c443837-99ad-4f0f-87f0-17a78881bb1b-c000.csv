@@ -1,0 +1,2 @@
+accuracy,auc_pr,auc_roc,brier,f1,fn,fp,precision,sensitivity,specificity,threshold,tn,tp
+0.9376,0.8105,0.9588,0.0357,0.6677,369,885,0.5874,0.7735,0.9521,0.3062,17576,1260

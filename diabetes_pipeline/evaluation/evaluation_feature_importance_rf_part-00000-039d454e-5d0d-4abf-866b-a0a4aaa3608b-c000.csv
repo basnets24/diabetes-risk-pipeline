@@ -1,0 +1,7 @@
+feature,importance,rank
+blood_glucose_level,0.4178,1
+hbA1c_level,0.416,2
+age,0.1329,3
+bmi,0.0274,4
+hypertension,0.0059,5
+heart_disease,0.0,6

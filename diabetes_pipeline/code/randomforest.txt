@@ -1,0 +1,108 @@
+Random Forest — Diabetes Classification and Feature Analysis
+=============================================================
+
+Overview
+--------
+We use a Random Forest classifier to predict diabetes from six clinical
+features. Unlike logistic regression, Random Forest does not require feature
+scaling and natively produces feature importance scores — making it useful
+both as a classifier and as an interpretability tool for understanding which
+features drive diabetes risk most.
+
+The pipeline runs across three Spark jobs on Google Dataproc.
+
+Key difference from the LR pipeline: no Platt calibration step. RF
+probabilities are generally closer to true prevalence than class-weighted LR,
+so we evaluate them directly. The Brier score in step 2 confirms whether
+calibration is needed.
+
+
+Features
+--------
+The model uses six clinical features assembled into a single vector:
+  - hbA1c_level          HbA1c (glycated haemoglobin), primary diabetes marker
+  - blood_glucose_level  Fasting or random blood glucose reading
+  - bmi                  Body mass index
+  - age                  Patient age
+  - hypertension         Binary: 1 if diagnosed with hypertension
+  - heart_disease        Binary: 1 if diagnosed with heart disease
+
+All features are numeric; no encoding or scaling is needed for RF.
+
+
+Pipeline Steps
+--------------
+
+1. Model Training (04_01_rf_model.py)
+   - Loads the pre-split stratified train set from GCS (Parquet).
+   - Computes class weights from the training label distribution to handle
+     class imbalance (~8% diabetic). Same weighting scheme as LR:
+       weight_for_1 = neg / total,  weight_for_0 = pos / total
+   - Trains RandomForestClassifier with:
+       numTrees=20, maxDepth=3, maxBins=16, subsamplingRate=0.7, seed=42
+     These are conservative settings chosen to avoid OOM on Dataproc.
+   - Saves the trained model to GCS.
+
+2. Evaluation (04_02_rf_eval.py)
+   - Loads the saved RF model.
+   - Scores the test set: transforms feature vectors through the RF model
+     and extracts the class-1 probability as prob_diabetic. Feature vectors
+     are dropped immediately after extraction to keep memory usage low.
+
+   Discrimination metrics (all threshold-free):
+   - AUC-ROC: overall discrimination ability — how well the model separates
+     diabetic from non-diabetic patients across all possible thresholds.
+   - AUC-PR: precision-recall AUC, more informative under class imbalance.
+   - Brier score: mean squared error between predicted probability and true
+     label. Indicates whether RF probabilities are well-calibrated without
+     Platt scaling.
+
+   Saves:
+   - predictions/rf_scored_test    scored test set (prob_diabetic)
+   - evaluation/metrics_rf/        AUC-ROC, AUC-PR, Brier in a single CSV
+
+3. Feature Importance (04_03_rf_features.py)
+   - Loads the saved RF model (no data scan needed — importances are stored
+     in the model itself).
+   - Extracts Gini-based feature importances: each score reflects how much
+     that feature reduces impurity across all trees, averaged and normalised
+     to sum to 1.
+   - Ranks features from most to least important and prints a visual bar.
+   - Saves the ranked list to GCS as a CSV.
+
+   This is the primary interpretability output of the RF pipeline. It answers:
+   "Which clinical features are most predictive of diabetes in this dataset?"
+   Expected result based on clinical literature: blood_glucose_level and
+   hbA1c_level should rank highest, with bmi and age following.
+
+   Saves:
+   - evaluation/feature_importance_rf/   ranked features with importance scores
+
+
+How the Output Is Used
+----------------------
+  prob_diabetic       — RF's estimated probability of diabetes for each
+                        test patient. Used to compare model discrimination
+                        against the LR calibrated probability.
+
+  feature importance  — The ranked list directly answers which features
+                        matter most for prediction. High importance for
+                        hbA1c and glucose validates the model is learning
+                        clinically meaningful patterns rather than noise.
+                        Low importance for hypertension/heart_disease would
+                        suggest those features add little beyond the lab values.
+
+Comparison with LR:
+  - If RF AUC ≈ LR AUC: both models are extracting similar signal.
+  - If RF AUC > LR AUC: RF is capturing non-linear interactions
+    (e.g. glucose × age) that LR misses.
+  - LR gives calibrated probabilities (via Platt); RF gives raw probs.
+    Check Brier score to decide if RF also needs calibration.
+
+
+GCS Outputs
+-----------
+models/rf_model                        trained Random Forest model
+predictions/rf_scored_test             test set with prob_diabetic + prediction
+evaluation/metrics_rf/                 AUC, Brier, confusion matrix
+evaluation/feature_importance_rf/      ranked feature importances
