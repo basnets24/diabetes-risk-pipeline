@@ -1,8 +1,0 @@
-metric,value
-TP,1346.0
-TN,12138.0
-FP,6323.0
-FN,283.0
-Sensitivity,0.8263
-Specificity,0.6575
-FPR,0.3425
