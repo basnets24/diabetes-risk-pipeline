@@ -1,7 +1,6 @@
 from pyspark.sql import SparkSession
 from pyspark.sql.functions import col, when, count, mean
 from sklearn.metrics import roc_auc_score, average_precision_score, brier_score_loss, precision_recall_curve
-import pandas as pd
 import numpy as np
 
 spark = SparkSession.builder \
@@ -29,22 +28,9 @@ auc_pr  = average_precision_score(test_pd["diabetes"], test_pd["prob_diabetic"])
 
 print(f"AUC-ROC: {auc_roc:.4f}  AUC-PR: {auc_pr:.4f}")
 
-# ── Calibration ───────────────────────────────────────────────────────────────
+# ── Brier score ───────────────────────────────────────────────────────────────
 brier = brier_score_loss(test_pd["diabetes"], test_pd["prob_diabetic"])
-
-test_pd["decile"] = pd.qcut(test_pd["prob_diabetic"], q=10, labels=False, duplicates="drop")
-calib_table = (
-    test_pd.groupby("decile")
-    .agg(n=("diabetes", "count"), avg_pred=("prob_diabetic", "mean"), actual_rate=("diabetes", "mean"))
-    .reset_index()
-)
-calib_table["gap"] = (calib_table["avg_pred"] - calib_table["actual_rate"]).round(4)
-
 print(f"\nBrier score: {brier:.4f}")
-print(f"\n--- Calibration Table (test set, deciles) ---")
-print(f"  {'decile':>6}  {'n':>6}  {'avg_pred':>9}  {'actual_rate':>11}  {'gap':>6}")
-for _, row in calib_table.iterrows():
-    print(f"  {int(row['decile']):>6}  {int(row['n']):>6}  {row['avg_pred']:>9.4f}  {row['actual_rate']:>11.4f}  {row['gap']:>+6.4f}")
 
 # ── Confusion matrix (calibrated, F2-tuned threshold on cal set) ─────────────
 precision_arr, recall_arr, thresholds_arr = precision_recall_curve(
@@ -108,25 +94,22 @@ summary_df.coalesce(1).write.mode("overwrite").option("header", "true").csv(
     "gs://team10-diabetes-data/evaluation/risk_summary_lr"
 )
 
-spark.createDataFrame(calib_table).coalesce(1) \
-    .write.mode("overwrite").option("header", "true").csv(
-        "gs://team10-diabetes-data/evaluation/calibration_table_lr"
-    )
 
 spark.createDataFrame([{
-    "auc_roc":     round(auc_roc,     4),
-    "auc_pr":      round(auc_pr,      4),
-    "brier":       round(brier,       4),
-    "threshold":   round(best_threshold, 4),
-    "sensitivity": round(sensitivity, 4),
-    "specificity": round(specificity, 4),
-    "precision":   round(precision_v, 4),
-    "f1":          round(f1_score,    4),
-    "accuracy":    round(accuracy,    4),
-    "tp": tp, "tn": tn, "fp": fp, "fn": fn,
+    "auc_roc":     float(round(auc_roc,        4)),
+    "auc_pr":      float(round(auc_pr,         4)),
+    "brier":       float(round(brier,          4)),
+    "threshold":   float(round(best_threshold, 4)),
+    "sensitivity": float(round(sensitivity,    4)),
+    "specificity": float(round(specificity,    4)),
+    "precision":   float(round(precision_v,    4)),
+    "f1":          float(round(f1_score,       4)),
+    "accuracy":    float(round(accuracy,       4)),
+    "tp": int(tp), "tn": int(tn), "fp": int(fp), "fn": int(fn),
 }]).coalesce(1).write.mode("overwrite").option("header", "true").csv(
     "gs://team10-diabetes-data/evaluation/metrics_lr"
 )
 
 print("Evaluation saved")
+del test_stratified, summary_df
 spark.stop()

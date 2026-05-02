@@ -10,7 +10,7 @@ spark = SparkSession.builder \
     .getOrCreate()
 
 spark.sparkContext.setLogLevel("WARN")
-spark.sparkContext.setCheckpointDir("gs://team10-diabetes-data/checkpoints")
+spark.sparkContext.setCheckpointDir("gs://team10-diabetes-data/checkpoints/lr_calibration")
 
 lr_model     = LogisticRegressionModel.load("gs://team10-diabetes-data/models/lr_model")
 scaler_model = StandardScalerModel.load("gs://team10-diabetes-data/models/lr_scaler")
@@ -52,4 +52,5 @@ platt_model = LogisticRegression(
 platt_model.write().overwrite().save("gs://team10-diabetes-data/models/platt_model")
 print("Platt model saved")
 
+del cal_platt
 spark.stop()
