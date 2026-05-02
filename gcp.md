@@ -42,58 +42,90 @@ gsutil cp diabetes_pipeline/code/*.py gs://team10-diabetes-data/code/
 
 Run these in order — each job depends on the output of the previous.
 
-### 1. Feature Engineering
+### 1. Preprocessing
 ```bash
 gcloud dataproc jobs submit pyspark \
-  gs://team10-diabetes-data/code/feature_engineering.py \
+  gs://team10-diabetes-data/code/01_preprocessing.py \
   --cluster=diabetes-cluster-ml \
   --region=us-west1
 ```
 
-### 2. Logistic Regression — Model
+### 2. Feature Engineering
 ```bash
 gcloud dataproc jobs submit pyspark \
-  gs://team10-diabetes-data/code/logistic_regression_model.py \
+  gs://team10-diabetes-data/code/02_feature_engineering.py \
   --cluster=diabetes-cluster-ml \
   --region=us-west1
 ```
 
-### 3. Logistic Regression — Evaluation
+### 3. LR — Train Model
 ```bash
 gcloud dataproc jobs submit pyspark \
-  gs://team10-diabetes-data/code/logistic_regression_eval.py \
+  gs://team10-diabetes-data/code/03_01_lr_model.py \
   --cluster=diabetes-cluster-ml \
   --region=us-west1
 ```
 
-### 4. Random Forest — Model
+### 4. LR — Fit Platt Calibration
 ```bash
 gcloud dataproc jobs submit pyspark \
-  gs://team10-diabetes-data/code/random_forest_model.py \
+  gs://team10-diabetes-data/code/03_02_lr_calibration.py \
   --cluster=diabetes-cluster-ml \
   --region=us-west1
 ```
 
-### 5. Random Forest — Evaluation & Feature Importance
+### 5. LR — Apply Calibration
 ```bash
 gcloud dataproc jobs submit pyspark \
-  gs://team10-diabetes-data/code/random_forest_eval.py \
+  gs://team10-diabetes-data/code/03_03_lr_apply_calibration.py \
   --cluster=diabetes-cluster-ml \
   --region=us-west1
 ```
 
-### 6. Risk Aggregation
+### 6. LR — Evaluation & Risk Stratification
 ```bash
 gcloud dataproc jobs submit pyspark \
-  gs://team10-diabetes-data/code/risk_aggregation.py \
+  gs://team10-diabetes-data/code/03_04_risk.py \
   --cluster=diabetes-cluster-ml \
   --region=us-west1
 ```
 
-### 7. Final Artifact
+### 7. RF — Train Model
 ```bash
 gcloud dataproc jobs submit pyspark \
-  gs://team10-diabetes-data/code/final_artifact.py \
+  gs://team10-diabetes-data/code/04_01_rf_model.py \
+  --cluster=diabetes-cluster-ml \
+  --region=us-west1
+```
+
+### 8. RF — Evaluation
+```bash
+gcloud dataproc jobs submit pyspark \
+  gs://team10-diabetes-data/code/04_02_rf_eval.py \
+  --cluster=diabetes-cluster-ml \
+  --region=us-west1
+```
+
+### 9. RF — Feature Importance
+```bash
+gcloud dataproc jobs submit pyspark \
+  gs://team10-diabetes-data/code/04_03_rf_features.py \
+  --cluster=diabetes-cluster-ml \
+  --region=us-west1
+```
+
+### 10. Final Artifact
+```bash
+gcloud dataproc jobs submit pyspark \
+  gs://team10-diabetes-data/code/05_final_artifact.py \
+  --cluster=diabetes-cluster-ml \
+  --region=us-west1
+```
+
+### 11. Risk Aggregation
+```bash
+gcloud dataproc jobs submit pyspark \
+  gs://team10-diabetes-data/code/06_risk_aggregation.py \
   --cluster=diabetes-cluster-ml \
   --region=us-west1
 ```
@@ -109,6 +141,14 @@ gcloud dataproc jobs submit pyspark \
 
 ## 4. Run the Full Pipeline via Workflow Template
 
+
+
+### Delete old template (if it exists)
+```bash
+gcloud dataproc workflow-templates delete diabetes-pipeline \
+  --region=us-west1
+```
+
 ### Create the workflow template (one-time setup)
 ```bash
 gcloud dataproc workflow-templates create diabetes-pipeline \
@@ -119,50 +159,78 @@ gcloud dataproc workflow-templates set-cluster-selector diabetes-pipeline \
   --cluster-labels=goog-dataproc-cluster-name=diabetes-cluster-ml
 
 gcloud dataproc workflow-templates add-job pyspark \
-  gs://team10-diabetes-data/code/feature_engineering.py \
-  --step-id=feature-engineering \
+  gs://team10-diabetes-data/code/01_preprocessing.py \
+  --step-id=preprocessing \
   --workflow-template=diabetes-pipeline \
   --region=us-west1
 
 gcloud dataproc workflow-templates add-job pyspark \
-  gs://team10-diabetes-data/code/logistic_regression_model.py \
+  gs://team10-diabetes-data/code/02_feature_engineering.py \
+  --step-id=feature-engineering \
+  --start-after=preprocessing \
+  --workflow-template=diabetes-pipeline \
+  --region=us-west1
+
+gcloud dataproc workflow-templates add-job pyspark \
+  gs://team10-diabetes-data/code/03_01_lr_model.py \
   --step-id=lr-model \
   --start-after=feature-engineering \
   --workflow-template=diabetes-pipeline \
   --region=us-west1
 
 gcloud dataproc workflow-templates add-job pyspark \
-  gs://team10-diabetes-data/code/logistic_regression_eval.py \
-  --step-id=lr-eval \
+  gs://team10-diabetes-data/code/03_02_lr_calibration.py \
+  --step-id=lr-calibration \
   --start-after=lr-model \
   --workflow-template=diabetes-pipeline \
   --region=us-west1
 
 gcloud dataproc workflow-templates add-job pyspark \
-  gs://team10-diabetes-data/code/random_forest_model.py \
-  --step-id=rf-model \
-  --start-after=lr-eval \
+  gs://team10-diabetes-data/code/03_03_lr_apply_calibration.py \
+  --step-id=lr-apply \
+  --start-after=lr-calibration \
   --workflow-template=diabetes-pipeline \
   --region=us-west1
 
 gcloud dataproc workflow-templates add-job pyspark \
-  gs://team10-diabetes-data/code/random_forest_eval.py \
+  gs://team10-diabetes-data/code/03_04_risk.py \
+  --step-id=lr-risk \
+  --start-after=lr-apply \
+  --workflow-template=diabetes-pipeline \
+  --region=us-west1
+
+gcloud dataproc workflow-templates add-job pyspark \
+  gs://team10-diabetes-data/code/04_01_rf_model.py \
+  --step-id=rf-model \
+  --start-after=feature-engineering \
+  --workflow-template=diabetes-pipeline \
+  --region=us-west1
+
+gcloud dataproc workflow-templates add-job pyspark \
+  gs://team10-diabetes-data/code/04_02_rf_eval.py \
   --step-id=rf-eval \
   --start-after=rf-model \
   --workflow-template=diabetes-pipeline \
   --region=us-west1
 
 gcloud dataproc workflow-templates add-job pyspark \
-  gs://team10-diabetes-data/code/risk_aggregation.py \
-  --step-id=risk-aggregation \
+  gs://team10-diabetes-data/code/04_03_rf_features.py \
+  --step-id=rf-features \
   --start-after=rf-eval \
   --workflow-template=diabetes-pipeline \
   --region=us-west1
 
 gcloud dataproc workflow-templates add-job pyspark \
-  gs://team10-diabetes-data/code/final_artifact.py \
+  gs://team10-diabetes-data/code/05_final_artifact.py \
   --step-id=final-artifact \
-  --start-after=risk-aggregation \
+  --start-after=lr-risk,rf-features \
+  --workflow-template=diabetes-pipeline \
+  --region=us-west1
+
+gcloud dataproc workflow-templates add-job pyspark \
+  gs://team10-diabetes-data/code/06_risk_aggregation.py \
+  --step-id=risk-aggregation \
+  --start-after=final-artifact \
   --workflow-template=diabetes-pipeline \
   --region=us-west1
 ```
@@ -185,10 +253,14 @@ gcloud dataproc operations list --region=us-west1
 ## 5. Download Outputs
 
 ```bash
-gsutil cp gs://team10-diabetes-data/evaluation/confusion_matrix_lr.csv .
-gsutil cp gs://team10-diabetes-data/evaluation/confusion_matrix_rf.csv .
+# Metrics
+gsutil -m cp -r gs://team10-diabetes-data/evaluation/ .
+
+# Final patient-level dataset
+gsutil -m cp -r gs://team10-diabetes-data/predictions/v2_final_dataset/ .
+
+# Manifest
 gsutil cp gs://team10-diabetes-data/manifest.json .
-gsutil -m cp -r gs://team10-diabetes-data/aggregations/ .
 ```
 
 ---
