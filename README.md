@@ -1,6 +1,4 @@
-# Team10 - Comprehensive Diabetes Clinical Dataset Analysis
-
----
+# Team 10 - Comprehensive Diabetes Clinical Dataset Analysis
 
 ## Team Members
 - Justin Tan
@@ -10,63 +8,69 @@
 
 ---
 
-## Dataset Choice & Justification
+## Dataset
 
-**Dataset Title:**
-100,000 Diabetes Clinical Dataset
+**Title:** 100,000 Diabetes Clinical Dataset  
+**Source:** [Kaggle — Priyam Choksi](https://www.kaggle.com/datasets/priyamchoksi/100000-diabetes-clinical-dataset/data)  
+**Size:** 100,000 records, 16 features  
+**Format:** CSV (5.9 MB uncompressed)
 
-**Source:** 
-https://www.kaggle.com/datasets/priyamchoksi/100000-diabetes-clinical-dataset/data
+Each record is an anonymized patient encounter aggregated from U.S. electronic health systems across 53 states and territories (2015–2022). The target variable is `diabetes` (0 = no, 1 = yes); prevalence is ~8.5%.
 
-**Size / Scope:**
-- 100,000 patient records
-- Mix of numerical and categorical features
-
-**Description:**
-This dataset contains anonymized clinical information related to diabetes. It includes patient demographics, clinical measurements such as blood glucose and HbA1c, and indicators of related conditions like hypertension and heart disease. The data is structured and suitable for large-scale analysis.
+> The raw CSV is not committed to this repository. Download it from Kaggle and place it at `data/raw_data/diabetes_dataset.csv` before running any pipeline steps.
 
 ---
-## Data Card Section 
-
-### File Format and Size 
-- **File format(s):** CSV 
-- **Compression:** .zip , .csv
-- **File size(s):** 896K (zip), 5.9M (.csv) 
-
-### Shape
-- **Row count:** 100001
-- **Column count:** 16
-
-### Parsing Details
-- **Delimiter:** comma 
-- **Header row present:** yes 
-- **Encoding:** charset=us-ascii 
-
----
-
-### Evidence Summary  
-
-Baseline Metrics: The total dataset of 100,000 individuals confirms a baseline prevalence of exactly 8.50% (8,500 diabetic out of 91,500 non-diabetic), which can be verified from out/evidence/data_quality_report.txt. Zero null values were found across all the 16 columns and all the binary fields contain only valid 0 or 1 values, and no invalid entries.
-
-Risk Profiles: Analysis of 20 ranked cohorts identified groups with prevalence rates ranging from 32.1% (Heart Disease) down to 4.1% (Smoking status: Unknown). All the top 3 cohorts surpass the baseline by a lot. This can be verified by looking at the full rankings in out/evidence/ranked_high_risk_profiles.csv.
-
-Geographic Density: Regional analysis across 53 locations in out/evidence/location_prevalence_profile.csv identified that Delaware, Kansas, and Illinois are the top three regions. All these regions exceeded 9.5% prevalence rate compared to the 8.5% baseline.
-
-Reliability Check: Categorical consistency was validated in out/evidence/assumption_test_category_distinct_sample.txt, where the gender field contains exactly three clean distinct values (Female, Male, Other). The ID repeat analysis in assumption_test_id_repeats_top20.txt confirms that high repetition in year values reflects the dataset distribution across 2015-2022, not duplicate patient records. 
-
-
-### Recommendation
-
-Targeted Outreach: Prioritize screening and education resources for the top three high-prevalence cohorts identified in out/evidence/ranked_high_risk_profiles.csv, which are individuals with Heart Disease (32.1% prevalence, 3,942 individuals), Hypertension (27.9%, 7,485 individuals), and Age 70+ (20.1%, 13,275 individuals). All three exceed the 8.5% baseline by a significant margin.
-
-Smoking Cessation Integration: Integrate diabetes screening into existing anti-smoking campaigns, specifically focusing on “Former” (13.9% prevalence, 19,803 individuals) and “Current” smokers (10.2%, 9,286 individuals) over the age of 55 as identified in out/evidence/ranked_high_risk_profiles.csv.
-
-Rule-Based Screening: As seen in out/evidence/risk_rule_flags.csv, the highest risk combination is Hypertension AND Obese at 32.5% prevalence rate across 3,246 individuals with 1,143 confirmed diabetes cases. Age 55+ AND Obese (30.5%) and Heart Disease (32.1%) are the next highest priority factors. More attention could be paid to these patients.
-
-Regional Funding: Additional funding to the locations with the highest prevalence as identified in out/evidence/location_prevalence_profile.csv. Delaware (9.82%), Kansas (9.77%), and Illinois (9.58%) lead the ranking and should be prioritized for location-targeted outreach programs.
-
 
 ## Repository Structure
-- README.md - Project overview, team members, and dataset description.
-- data/ - dataset download instructions (raw dataset is not stored in this repository).
-- .gitignore - Specifies files excluded from version control.
+
+```
+.
+├── README.md                        — this file
+├── gcp.md                           — GCP Dataproc setup and job submission
+├── data/
+│   └── raw_data/                    — place diabetes_dataset.csv here (not tracked)
+├── scripts/                         — past sprint shell scripts and utilities
+├── out/                             — evidence generated from scripts
+├── docs/                            — supplementary documentation
+└── diabetes_pipeline/               — ML pipeline (PySpark on GCP Dataproc)
+    ├── code/                        — 01_preprocessing through 06_risk_aggregation
+    ├── evaluation/                  — model metrics (downloaded from GCS)
+    ├── aggregations/                — risk aggregation outputs (downloaded from GCS)
+    └── visualization/               — dataset_overview.ipynb, model_results.ipynb
+```
+
+---
+
+## ML Pipeline Overview
+
+The ML pipeline runs on **GCP Dataproc** (PySpark 4.0.2). Two models are trained and evaluated on a 70/10/20 stratified split:
+
+- **Logistic Regression:** Pre-lab screening with calibrated risk scores (AUC-ROC: 0.9588)
+- **Random Forest:** Full classification + feature interpretability (AUC-ROC: 0.9672)
+
+**Feature set:** `hbA1c_level`, `blood_glucose_level`, `bmi`, `age`, `hypertension`, `heart_disease`
+
+See [docs/logisticregression.md](docs/logisticregression.md) and [docs/randomforest.md](docs/randomforest.md) for detailed pipeline documentation.
+
+## What the pipeline does
+
+- Cleans and filters the raw clinical CSV into a compact, analysis-ready table.
+- Builds stratified train / calibration / test feature sets and assembles model-ready vectors.
+- Trains logistic regression (with Platt calibration) and random forest models on GCP Dataproc.
+- Produces calibrated per-record risk probabilities, risk-band assignments, and evaluation metrics written to GCS.
+
+## Why this is useful (for stakeholders and users)
+
+- Clinicians: receives calibrated patient-risk scores to support early detection and prioritize high-risk patients for follow-up.
+- Health system managers: uses aggregated risk and cohort-level trends to allocate screening resources and plan interventions.
+- Data teams & implementers: gains reproducible artifacts (models, predictions, metrics) and GCS outputs for deployment, monitoring, and auditing.
+- Researchers & quality teams: enables reproducible comparisons between models, supporting evaluation of interventions and policy decisions.
+- Patients and care coordinators: supports targeted outreach and personalized screening to improve outcomes and reduce missed diagnoses.
+
+---
+
+## Running the Pipeline
+
+1. Ensure GCP access to project `team10-diabetes-final-sprint` and raw dataset at `data/raw_data/diabetes_dataset.csv`
+2. See [gcp.md](gcp.md) for step-by-step cluster setup and job submission
+3. View results in `diabetes_pipeline/visualization/` notebooks
