@@ -1,8 +1,8 @@
 # Diabetes Risk Pipeline
 
-A multi-stage distributed ML pipeline for early diabetes detection, built with PySpark on Google Cloud Dataproc. Trained on 100,000 anonymized records, it produces calibrated risk scores and cohort-level aggregations to support clinical triage and resource allocation.
+A big data pipeline built with PySpark on Google Cloud Dataproc, processing 100,000 anonymized records end-to-end, from ingestion, distributed feature engineering for identification of risk groups and ML model training, evaluation, and visualization of cohort-level risk artifacts. The ML component produces calibrated risk scores to support clinical triage and resource allocation.
 
-**AUC-ROC: 0.9672 (Random Forest) | 0.9588 (Logistic Regression)**
+The project evolved from local Unix-based processing (cut, sort, awk, sed, shell scripting on CSV files) to a fully distributed PySpark pipeline running on a GCP Dataproc cluster, storing all intermediate data as Parquet on GCS for efficient distributed reads across jobs.
 
 ---
 
