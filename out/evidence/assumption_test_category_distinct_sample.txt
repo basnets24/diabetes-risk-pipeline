@@ -1,4 +1,0 @@
-sample distinct category values (up to 100)
-Female
-Male
-Other
